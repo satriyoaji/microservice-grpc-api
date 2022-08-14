@@ -1,28 +1,27 @@
-package cmd
+package main
 
-import "github.com/spf13/viper"
+import (
+	"log"
 
-type Config struct {
-	Port          string `mapstructure:"PORT"`
-	AuthSvcUrl    string `mapstructure:"AUTH_SVC_URL"`
-	ProductSvcUrl string `mapstructure:"PRODUCT_SVC_URL"`
-	OrderSvcUrl   string `mapstructure:"ORDER_SVC_URL"`
-}
+	"github.com/gin-gonic/gin"
+	"github.com/satriyoaji/api-gateway/pkg/auth"
+	"github.com/satriyoaji/api-gateway/pkg/config"
+	"github.com/satriyoaji/api-gateway/pkg/order"
+	"github.com/satriyoaji/api-gateway/pkg/product"
+)
 
-func LoadConfig() (c Config, err error) {
-	viper.AddConfigPath("./pkg/config/envs")
-	viper.SetConfigName("dev")
-	viper.SetConfigType("env")
-
-	viper.AutomaticEnv()
-
-	err = viper.ReadInConfig()
+func main() {
+	c, err := config.LoadConfig()
 
 	if err != nil {
-		return
+		log.Fatalln("Failed at config", err)
 	}
 
-	err = viper.Unmarshal(&c)
+	r := gin.Default()
 
-	return
+	authSvc := *auth.RegisterRoutes(r, &c)
+	product.RegisterRoutes(r, &c, &authSvc)
+	order.RegisterRoutes(r, &c, &authSvc)
+
+	r.Run(c.Port)
 }
